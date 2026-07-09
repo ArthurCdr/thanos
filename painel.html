@@ -1,0 +1,326 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Painel BM Runner</title>
+<style>
+  :root{
+    --bg:#0f1115; --panel:#171a21; --panel2:#1d212b; --line:#2a2f3a;
+    --tx:#e8eaf0; --tx2:#9aa3b2; --ok:#3fb96a; --warn:#e0a93e; --err:#e05d5d;
+    --acc:#4c8dff; --acc2:#7aa8ff;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--tx);font:14px/1.45 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif}
+  header{display:flex;align-items:center;gap:14px;padding:14px 20px;border-bottom:1px solid var(--line);position:sticky;top:0;background:var(--bg);z-index:5}
+  header h1{font-size:16px;margin:0;font-weight:600}
+  .badge{padding:3px 10px;border-radius:20px;font-size:12px;border:1px solid var(--line);color:var(--tx2)}
+  .badge.on{color:#0f1115;background:var(--ok);border-color:var(--ok);font-weight:600}
+  .spacer{flex:1}
+  main{display:grid;grid-template-columns:minmax(420px,1fr) minmax(420px,1fr);gap:16px;padding:16px 20px;max-width:1500px;margin:0 auto}
+  @media(max-width:980px){main{grid-template-columns:1fr}}
+  section{background:var(--panel);border:1px solid var(--line);border-radius:10px;overflow:hidden}
+  section>h2{font-size:13px;margin:0;padding:10px 14px;border-bottom:1px solid var(--line);color:var(--tx2);text-transform:uppercase;letter-spacing:.06em}
+  .pad{padding:14px}
+  button{background:var(--acc);border:0;color:#fff;padding:8px 14px;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer}
+  button:hover{background:var(--acc2)}
+  button:disabled{opacity:.45;cursor:not-allowed}
+  button.ghost{background:transparent;border:1px solid var(--line);color:var(--tx)}
+  button.ghost:hover{border-color:var(--acc)}
+  button.mini{padding:4px 9px;font-size:12px}
+  button.danger{background:var(--err)}
+  input,select{background:var(--panel2);border:1px solid var(--line);border-radius:7px;color:var(--tx);padding:7px 9px;font-size:13px;width:100%}
+  input:focus{outline:none;border-color:var(--acc)}
+  label{display:block;font-size:11px;color:var(--tx2);margin:0 0 3px 2px;text-transform:uppercase;letter-spacing:.05em}
+  .grid2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+  .grid3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px}
+  .grid4{display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:10px}
+  .field{margin-bottom:10px}
+  .bm{border:1px solid var(--line);border-radius:9px;padding:12px;margin-bottom:10px;background:var(--panel2)}
+  .bm .top{display:flex;gap:8px;align-items:center;margin-bottom:8px}
+  .bm .st{font-size:12px;padding:2px 9px;border-radius:20px;white-space:nowrap}
+  .st.done{background:rgba(63,185,106,.15);color:var(--ok)}
+  .st.pend{background:rgba(224,169,62,.13);color:var(--warn)}
+  #log{background:#0b0d11;border-top:1px solid var(--line);margin:0;padding:12px 14px;height:420px;overflow-y:auto;font:12px/1.5 "SF Mono",Menlo,monospace;white-space:pre-wrap;word-break:break-all;color:#c7cdd8}
+  #qcard{display:none;margin:14px;border:1px solid var(--acc);border-radius:10px;padding:14px;background:rgba(76,141,255,.08)}
+  #qcard.show{display:block;animation:pulse 1.2s ease-in-out infinite alternate}
+  @keyframes pulse{from{box-shadow:0 0 0 0 rgba(76,141,255,.25)}to{box-shadow:0 0 0 6px rgba(76,141,255,.06)}}
+  #qtext{margin:0 0 12px;font-size:14px;white-space:pre-wrap}
+  #qbtns{display:flex;gap:8px;flex-wrap:wrap}
+  .toast{position:fixed;bottom:18px;right:18px;background:var(--panel2);border:1px solid var(--line);border-left:3px solid var(--ok);padding:10px 16px;border-radius:8px;opacity:0;transition:opacity .25s;pointer-events:none;z-index:10}
+  .toast.show{opacity:1}
+  .hint{font-size:12px;color:var(--tx2);margin:6px 2px}
+  details summary{cursor:pointer;color:var(--tx2);font-size:13px;padding:4px 0}
+</style>
+</head>
+<body>
+<div id="offline" style="display:none;background:#e05d5d;color:#fff;padding:12px 20px;font-weight:600">
+  ⚠ Servidor desligado — este painel só funciona servido pelo Node.
+  Rode <code style="background:rgba(0,0,0,.25);padding:2px 7px;border-radius:5px">node server.mjs</code>
+  na pasta do projeto e abra <a href="http://localhost:4850" style="color:#fff">http://localhost:4850</a>.
+</div>
+<header>
+  <h1>🤖 Painel BM Runner</h1>
+  <span id="status" class="badge">parado</span>
+  <span class="spacer"></span>
+  <select id="etapa" style="width:auto;padding:8px 10px" title="Qual etapa da esteira rodar">
+    <option value="convite">Etapa 1 — Aceitar convites + renomear BMs</option>
+    <option value="pagamento">Etapa 2 — Cartão + cobrança LLC</option>
+    <option value="contas">Etapa 3 — Contas (acesso · rename · parceiro)</option>
+    <option value="tudo">Tudo (3 etapas por BM)</option>
+  </select>
+  <button id="btnRun">▶ Iniciar</button>
+</header>
+
+<main>
+  <div style="display:flex;flex-direction:column;gap:16px">
+    <section>
+      <h2>① Conexão AdsPower</h2>
+      <div class="pad">
+        <div class="grid2">
+          <div class="field"><label>Endereço da Local API</label><input id="ap_host" placeholder="http://127.0.0.1:50325"></div>
+          <div class="field"><label>ID do perfil</label><input id="ap_user" placeholder="ex: k1bucwpc"></div>
+        </div>
+        <div class="field"><label>API Key (deixe vazio se sua versão não exige)</label><input id="ap_key" type="password" placeholder="cole a chave da Local API"></div>
+        <div style="display:flex;gap:8px;align-items:center">
+          <button onclick="salvarAds()">💾 Salvar conexão</button>
+          <button class="ghost" onclick="testarAds()">🔌 Testar conexão</button>
+          <span id="ap_res" class="hint" style="margin:0"></span>
+        </div>
+        <p class="hint">No AdsPower: Configurações → Local API (liga e mostra o endereço/porta). O ID do perfil está na lista de perfis.</p>
+      </div>
+    </section>
+
+    <section>
+      <h2>② Fila de BMs</h2>
+      <div class="pad">
+        <div id="fila"></div>
+        <div style="display:flex;gap:8px;margin-top:6px">
+          <button class="ghost" onclick="addBM()">+ Adicionar BM</button>
+          <span class="spacer"></span>
+          <button onclick="salvarConfig()">💾 Salvar tudo</button>
+        </div>
+        <p class="hint">Por BM: invite + LLC (e admin se for convite multi-admin do IG). Nomes AT{n}/CA{c}-AT{n} são gerados sozinhos.</p>
+      </div>
+    </section>
+
+    <section>
+      <h2>③ Configurações (defaults)</h2>
+      <div class="pad" id="defaults">
+        <div class="grid3">
+          <div class="field"><label>Partner Business ID</label><input id="d_partner"></div>
+          <div class="field"><label>Seq inicial (AT…)</label><input id="d_seq" type="number" min="1"></div>
+          <div class="field"><label>Qtd contas de anúncio</label><input id="d_qtd" type="number" min="1" max="10"></div>
+        </div>
+        <div class="grid2">
+          <div class="field"><label>País</label><input id="d_pais"></div>
+          <div class="field"><label>Fuso (busca)</label><input id="d_fuso"></div>
+        </div>
+        <label style="margin-top:4px">Endereço fixo (LLC)</label>
+        <div class="grid4">
+          <div class="field" style="grid-column:span 2"><input id="d_end1" placeholder="Endereço 1"></div>
+          <div class="field"><input id="d_cidade" placeholder="Cidade"></div>
+          <div class="field"><input id="d_cepend" placeholder="CEP"></div>
+        </div>
+        <div class="grid2">
+          <div class="field"><label>Estado</label><input id="d_estado"></div>
+          <div></div>
+        </div>
+        <label>Cartão — só dados NÃO sensíveis (número e CVV são digitados na janela do AdsPower)</label>
+        <div class="grid3">
+          <div class="field"><input id="d_cnome" placeholder="Nome no cartão"></div>
+          <div class="field"><input id="d_cval" placeholder="Validade MM/AA"></div>
+          <div class="field"><input id="d_ccep" placeholder="CEP do cartão"></div>
+        </div>
+        <details><summary>Avançado (padrões de nome)</summary>
+          <div class="grid2" style="margin-top:8px">
+            <div class="field"><label>Padrão nome BM</label><input id="d_pbm"></div>
+            <div class="field"><label>Padrão nome conta</label><input id="d_pconta"></div>
+          </div>
+        </details>
+      </div>
+    </section>
+  </div>
+
+  <section>
+    <h2>Execução</h2>
+    <div id="qcard">
+      <p id="qtext"></p>
+      <div id="qbtns"></div>
+    </div>
+    <pre id="log"></pre>
+  </section>
+</main>
+
+<div id="toast" class="toast"></div>
+
+<script>
+let ST = { bms: [], defaults: {}, prog: {}, running: false, pending: null };
+
+const $ = (id) => document.getElementById(id);
+const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+
+function toast(msg){ const t=$("toast"); t.textContent=msg; t.classList.add("show"); setTimeout(()=>t.classList.remove("show"),2200); }
+
+// ---------- fila ----------
+const NOMES_ETAPA = { convite:"1·Convite", pagamento:"2·Pagamento", contas:"3·Contas" };
+function chipsEtapas(rec){
+  if(!rec) return `<span class="st pend">⏳ pendente</span>`;
+  const chips = Object.keys(NOMES_ETAPA).map(e=>{
+    const feita = !!rec.etapas?.[e];
+    return `<span class="st ${feita?"done":"pend"}" title="${e}">${feita?"🟢":"⚪"} ${NOMES_ETAPA[e]}</span>`;
+  }).join(" ");
+  const nome = rec.nome ? `<strong style="margin-right:6px">${esc(rec.nome)}</strong>` : "";
+  return nome + chips;
+}
+function renderFila(){
+  $("fila").innerHTML = ST.bms.map((bm,i)=>{
+    const rec = ST.prog[bm.inviteLink];
+    return `<div class="bm">
+      <div class="top"><strong>BM ${i+1}</strong>&nbsp;${chipsEtapas(rec)}<span class="spacer" style="flex:1"></span>
+        <button class="mini danger" onclick="delBM(${i})">✕</button></div>
+      <div class="field"><label>Invite link</label>
+        <input value="${esc(bm.inviteLink)}" placeholder="https://business.facebook.com/invitation/?token=…" onchange="ST.bms[${i}].inviteLink=this.value"></div>
+      <div class="grid3">
+        <div class="field"><label>Nome da LLC</label>
+          <input value="${esc(bm.llcNome)}" onchange="ST.bms[${i}].llcNome=this.value"></div>
+        <div class="field"><label>Admin nome (opcional)</label>
+          <input value="${esc(bm.admin?.nome)}" onchange="setAdmin(${i},'nome',this.value)"></div>
+        <div class="field"><label>Admin sobrenome</label>
+          <input value="${esc(bm.admin?.sobrenome)}" onchange="setAdmin(${i},'sobrenome',this.value)"></div>
+      </div></div>`;
+  }).join("") || `<p class="hint">Nenhuma BM na fila. Clique em “+ Adicionar BM”.</p>`;
+}
+function setAdmin(i,k,v){ ST.bms[i].admin = ST.bms[i].admin||{}; ST.bms[i].admin[k]=v; }
+function addBM(){ ST.bms.push({inviteLink:"",llcNome:"",admin:{nome:"",sobrenome:""}}); renderFila(); }
+function delBM(i){ ST.bms.splice(i,1); renderFila(); }
+
+// ---------- defaults ----------
+function renderDefaults(){
+  const d = ST.defaults;
+  $("d_partner").value=d.partnerBusinessId||""; $("d_seq").value=d.seqInicial??1; $("d_qtd").value=d.qtdContasAnuncio??1;
+  $("d_pais").value=d.pais||""; $("d_fuso").value=d.fuso||"";
+  $("d_end1").value=d.endereco?.endereco1||""; $("d_cidade").value=d.endereco?.cidade||"";
+  $("d_cepend").value=d.endereco?.cep||""; $("d_estado").value=d.endereco?.estado||"";
+  $("d_cnome").value=d.cartao?.nome||""; $("d_cval").value=d.cartao?.validade||""; $("d_ccep").value=d.cartao?.cep||"";
+  $("d_pbm").value=d.padraoNomeBM||"AT{n}"; $("d_pconta").value=d.padraoNomeConta||"CA{c}-AT{n}";
+}
+function coletarDefaults(){
+  return { ...ST.defaults,
+    partnerBusinessId:$("d_partner").value.trim(), seqInicial:Number($("d_seq").value)||1,
+    qtdContasAnuncio:Number($("d_qtd").value)||1, pais:$("d_pais").value.trim(), fuso:$("d_fuso").value.trim(),
+    endereco:{ endereco1:$("d_end1").value.trim(), cidade:$("d_cidade").value.trim(),
+               cep:$("d_cepend").value.trim(), estado:$("d_estado").value.trim() },
+    cartao:{ nome:$("d_cnome").value.trim(), validade:$("d_cval").value.trim(), cep:$("d_ccep").value.trim() },
+    padraoNomeBM:$("d_pbm").value.trim()||"AT{n}", padraoNomeConta:$("d_pconta").value.trim()||"CA{c}-AT{n}" };
+}
+// ---------- conexão AdsPower ----------
+function renderAds(){
+  const a = ST.adspower||{};
+  $("ap_host").value = a.apiHost||"http://127.0.0.1:50325";
+  $("ap_user").value = a.userId||"";
+  $("ap_key").value = a.apiKey||"";
+}
+async function salvarAds(){
+  try{
+    const r = await fetch("/api/adspower",{method:"POST",headers:{"Content-Type":"application/json"},
+      body:JSON.stringify({apiHost:$("ap_host").value.trim(),apiKey:$("ap_key").value.trim(),userId:$("ap_user").value.trim()})});
+    const j = await r.json();
+    if(r.ok){ toast("💾 Conexão salva"); ST.adspower={apiHost:$("ap_host").value.trim(),apiKey:$("ap_key").value.trim(),userId:$("ap_user").value.trim()}; }
+    else toast("⚠ "+(j.erro||"erro"));
+  }catch{ setOffline(true); }
+}
+async function testarAds(){
+  const el = $("ap_res"); el.textContent="testando…"; el.style.color="var(--tx2)";
+  await salvarAds();
+  try{
+    const j = await (await fetch("/api/adspower/test")).json();
+    el.textContent = (j.ok?"✅ ":"❌ ") + j.msg;
+    el.style.color = j.ok ? "var(--ok)" : "var(--err)";
+  }catch{ el.textContent="❌ servidor não respondeu"; el.style.color="var(--err)"; }
+}
+
+async function salvarConfig(){
+  try{
+    const bms = ST.bms.filter(b=>b.inviteLink && b.inviteLink.trim());
+    const r = await fetch("/api/config",{method:"POST",headers:{"Content-Type":"application/json"},
+      body:JSON.stringify({defaults:coletarDefaults(),businessManagers:bms})});
+    const j = await r.json();
+    if(r.ok){ toast("💾 Config salvo"); return true; }
+    toast("⚠ "+(j.erro||"erro ao salvar")); return false;
+  }catch{ setOffline(true); return false; }
+}
+
+// ---------- execução ----------
+async function run(){
+  try{
+    if(!(await salvarConfig())) return;
+    if(!ST.bms.some(b=>b.inviteLink && b.inviteLink.trim())){ toast("⚠ Adicione ao menos 1 BM com invite link"); return; }
+    const etapa = $("etapa").value;
+    const r = await fetch("/api/run",{method:"POST",headers:{"Content-Type":"application/json"},
+      body:JSON.stringify({etapa})});
+    const j = await r.json();
+    if(!r.ok) toast("⚠ "+(j.erro||"não iniciou"));
+  }catch{ setOffline(true); }
+}
+function setOffline(off){
+  document.getElementById("offline").style.display = off ? "block" : "none";
+  if(off){ $("status").textContent="sem servidor"; $("status").classList.remove("on"); $("btnRun").disabled = true; }
+}
+$("btnRun").onclick = run;
+
+function setRunning(on){
+  ST.running = on;
+  $("status").textContent = on ? "rodando" : "parado";
+  $("status").classList.toggle("on", on);
+  $("btnRun").disabled = on;
+}
+
+function renderQuestion(q){
+  ST.pending = q;
+  const card = $("qcard");
+  if(!q){ card.classList.remove("show"); return; }
+  $("qtext").textContent = q.text;
+  const btns = (q.options||[]).map(o=>`<button onclick="answer('${q.id}','${esc(o.value)}')">${esc(o.label)}</button>`);
+  if(q.allowText) btns.push(`<input id="qfree" style="width:160px" placeholder="resposta…">
+    <button class="ghost" onclick="answer('${q.id}', document.getElementById('qfree').value)">Enviar</button>`);
+  $("qbtns").innerHTML = btns.join("");
+  card.classList.add("show");
+}
+async function answer(id, value){
+  const r = await fetch("/api/answer",{method:"POST",headers:{"Content-Type":"application/json"},
+    body:JSON.stringify({id, value})});
+  if(!r.ok){ const j=await r.json(); toast("⚠ "+(j.erro||"erro")); }
+}
+
+function logLine(line){
+  const el = $("log");
+  el.textContent += line + "\n";
+  if(el.textContent.length > 200000) el.textContent = el.textContent.slice(-150000);
+  el.scrollTop = el.scrollHeight;
+}
+
+// ---------- boot ----------
+async function load(){
+  let s;
+  try{ s = await (await fetch("/api/state")).json(); setOffline(false); }
+  catch{ setOffline(true); renderFila(); return; }
+  ST.bms = (s.config.businessManagers||[]).map(b=>({admin:{},...b}));
+  ST.defaults = s.config.defaults||{};
+  ST.adspower = s.config.adspower||{};
+  ST.prog = s.progress?.bms || {};
+  renderFila(); renderDefaults(); renderAds(); setRunning(s.running);
+  $("log").textContent = (s.logs||[]).join("\n") + "\n";
+  $("log").scrollTop = $("log").scrollHeight;
+  renderQuestion(s.pending);
+}
+const es = new EventSource("/api/events");
+es.addEventListener("log", (e)=>logLine(JSON.parse(e.data).line));
+es.addEventListener("question", (e)=>renderQuestion(JSON.parse(e.data)));
+es.addEventListener("status", (e)=>{ const d=JSON.parse(e.data); setRunning(d.running); if(!d.running) load(); });
+es.onopen = ()=>{ setOffline(false); };
+es.onerror = ()=>{ if(location.protocol==="file:") setOffline(true); };
+load();
+</script>
+</body>
+</html>

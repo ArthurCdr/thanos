@@ -1,0 +1,12 @@
+# Dados sensíveis / locais — NUNCA versionar
+config.json
+progress.json
+relatorios/
+node_modules/
+
+# Specs e gravação original têm dados reais (partner ID, LLC, nomes) — fora do repo público
+docs/
+HANDOFF.md
+
+# Lixo do macOS
+.DS_Store

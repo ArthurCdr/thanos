@@ -1,0 +1,48 @@
+{
+  "adspower": {
+    "apiHost": "http://127.0.0.1:50325",
+    "apiKey": "",
+    "userId": "COLE_O_ID_DO_SEU_PERFIL"
+  },
+  "pacing": { "minMs": 1500, "maxMs": 3500, "typeDelayMs": 120, "settleMs": 1200 },
+
+  "defaults": {
+    "pais": "Estados Unidos da América",
+    "fuso": "Nova York",
+    "partnerBusinessId": "COLE_O_ID_DA_SUA_BM_CENTRAL",
+    "seqInicial": 8,
+    "qtdContasAnuncio": 3,
+    "cartao": { "nome": "Nome no Cartao", "validade": "MM/AA", "cep": "33131" },
+    "endereco": {
+      "endereco1": "Rua/numero da LLC",
+      "cidade": "Cidade",
+      "cep": "00000",
+      "estado": "Delaware"
+    },
+    "padraoNomeBM": "AT{n}",
+    "padraoNomeConta": "CA{c}-AT{n}"
+  },
+
+  "businessManagers": [
+    {
+      "inviteLink": "https://business.facebook.com/.../invitation/?token=COLE_AQUI",
+      "llcNome": "Nome da LLC desta BM",
+      "admin": { "nome": "Nome", "sobrenome": "Sobrenome" }
+    },
+    {
+      "inviteLink": "https://business.facebook.com/.../invitation/?token=COLE_AQUI",
+      "llcNome": "Outra LLC"
+    }
+  ],
+
+  "_notas": [
+    "Por BM voce so preenche: inviteLink, llcNome (e admin se for convite multi-admin do IG).",
+    "Numeracao: comeca em seqInicial e conta sozinho (8, 9, 10...). Pode fixar 'seq' por BM pra sobrescrever.",
+    "Nomes derivados: BM = padraoNomeBM (AT{n}); contas = padraoNomeConta (CA{c}-AT{n}). Ex.: AT8 -> CA1-AT8.",
+    "qtdContasAnuncio: 1 pra testar, 3 no real.",
+    "pacing: minMs/maxMs = respiro entre passos; typeDelayMs = velocidade de digitacao; settleMs = espera apos navegar.",
+    "cartao.nome/validade/cep sao fixos; NUMERO e CVV sao digitados manualmente (nunca aqui).",
+    "endereco e fixo (igual pra todas); so o llcNome muda por BM.",
+    "Senha/login e numero/CVV do cartao NUNCA entram neste arquivo."
+  ]
+}
