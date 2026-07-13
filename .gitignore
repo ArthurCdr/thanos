@@ -13,3 +13,4 @@ HANDOFF.md
 
 # Node local baixado pelo instalador (por máquina)
 .node/
+progress.backup-*.json

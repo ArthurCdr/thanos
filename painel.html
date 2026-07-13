@@ -95,8 +95,9 @@
       <h2>② Fila de BMs</h2>
       <div class="pad">
         <div id="fila"></div>
-        <div style="display:flex;gap:8px;margin-top:6px">
+        <div style="display:flex;gap:8px;margin-top:6px;align-items:center">
           <button class="ghost" onclick="addBM()">+ Adicionar BM</button>
+          <button class="ghost" onclick="resetarProgresso()" title="Zera o progresso e a numeração (com backup). Próxima BM volta ao Seq inicial.">🗑 Resetar progresso</button>
           <span class="spacer"></span>
           <button onclick="salvarConfig()">💾 Salvar tudo</button>
         </div>
@@ -243,6 +244,16 @@ async function testarAds(){
     el.textContent = (j.ok?"✅ ":"❌ ") + j.msg;
     el.style.color = j.ok ? "var(--ok)" : "var(--err)";
   }catch{ el.textContent="❌ servidor não respondeu"; el.style.color="var(--err)"; }
+}
+
+async function resetarProgresso(){
+  if(!confirm("Resetar o progresso e a numeração?\n\nAs BMs concluídas serão esquecidas (um backup é salvo automaticamente). A próxima BM volta ao Seq inicial.")) return;
+  try{
+    const r = await fetch("/api/reset",{method:"POST"});
+    const j = await r.json();
+    if(r.ok){ toast("🗑 Progresso resetado (backup salvo)"); load(); }
+    else toast("⚠ "+(j.erro||"erro"));
+  }catch{ setOffline(true); }
 }
 
 async function salvarConfig(){

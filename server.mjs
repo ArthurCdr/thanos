@@ -198,6 +198,24 @@ const server = http.createServer(async (req, res) => {
       }
     }
 
+    if (req.method === "POST" && url.pathname === "/api/reset") {
+      if (state.running) return json(res, 409, { erro: "Pare a execução antes de resetar." });
+      try {
+        if (existsSync(PROGRESS_PATH)) {
+          const d = new Date();
+          const p = (n) => String(n).padStart(2, "0");
+          const stamp = `${d.getFullYear()}${p(d.getMonth() + 1)}${p(d.getDate())}-${p(d.getHours())}${p(d.getMinutes())}${p(d.getSeconds())}`;
+          copyFileSync(PROGRESS_PATH, join(DIR, `progress.backup-${stamp}.json`));
+        }
+        writeFileSync(PROGRESS_PATH, JSON.stringify({ versao: 3, bms: {} }, null, 2) + "\n");
+        console.log("🗑 Progresso resetado (backup salvo). Numeração recomeça do seqInicial.");
+        json(res, 200, { ok: true });
+      } catch (e) {
+        json(res, 500, { erro: e.message });
+      }
+      return;
+    }
+
     if (req.method === "POST" && url.pathname === "/api/run") {
       if (state.running) return json(res, 409, { erro: "Já existe uma execução em andamento." });
       const body = await lerBody(req).catch(() => ({}));
