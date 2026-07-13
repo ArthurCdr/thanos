@@ -11,7 +11,16 @@ export function makeAdsPower(cfg) {
   async function apReq(path) {
     const headers = ap.apiKey ? { Authorization: `Bearer ${ap.apiKey}` } : {};
     await sleep(1300); // AdsPower limita ~1 req/s
-    const r = await fetch(`${ap.apiHost}${path}`, { headers });
+    let r;
+    try {
+      r = await fetch(`${ap.apiHost}${path}`, { headers });
+    } catch (e) {
+      throw new Error(
+        `Não consegui conectar na Local API do AdsPower em ${ap.apiHost || "(vazio)"}. ` +
+        `Abra o AdsPower, ligue a Local API (Configurações → Local API) e confira o endereço/porta ` +
+        `na aba "Conexão AdsPower" do painel (botão Testar conexão). [${e.message}]`
+      );
+    }
     const j = await r.json();
     if (j.code !== 0) throw new Error(j.msg || "AdsPower retornou erro");
     return j.data;
