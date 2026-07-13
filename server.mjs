@@ -148,8 +148,10 @@ const server = http.createServer(async (req, res) => {
       if (body.defaults && typeof body.defaults === "object") cfg.defaults = body.defaults;
       if (Array.isArray(body.businessManagers)) {
         for (const bm of body.businessManagers) {
-          if (!bm.inviteLink || typeof bm.inviteLink !== "string")
-            return json(res, 400, { erro: "Toda BM precisa de inviteLink." });
+          const temLink = bm.inviteLink && typeof bm.inviteLink === "string";
+          const temId = bm.businessId && String(bm.businessId).trim();
+          if (!temLink && !temId)
+            return json(res, 400, { erro: "Cada BM precisa de invite link OU business ID." });
         }
         cfg.businessManagers = body.businessManagers;
       }

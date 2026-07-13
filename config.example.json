@@ -8,6 +8,7 @@
 
   "defaults": {
     "pais": "Estados Unidos da América",
+    "moeda": "Dólar americano",
     "fuso": "Nova York",
     "partnerBusinessId": "COLE_O_ID_DA_SUA_BM_CENTRAL",
     "seqInicial": 8,

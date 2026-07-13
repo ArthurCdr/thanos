@@ -36,13 +36,19 @@ export function makeHelpers(cfg, io = ioTerminal()) {
   const human = () => sleep(minMs + Math.random() * (maxMs - minMs));
 
   // Espera a pagina assentar depois de uma navegacao/clique que troca de tela.
+  // Alem do domcontentloaded, espera a REDE assentar (SPA da Meta busca dados
+  // depois do load) e da um respiro. Todos os waits sao best-effort (nunca travam).
   async function settle(page) {
-    try {
-      await page.waitForLoadState("domcontentloaded", { timeout: 10000 });
-    } catch {
-      /* segue: timeout de load nao deve travar o fluxo */
-    }
+    try { await page.waitForLoadState("domcontentloaded", { timeout: 10000 }); } catch { /* ok */ }
+    try { await page.waitForLoadState("networkidle", { timeout: 8000 }); } catch { /* SPA pode nunca ficar idle */ }
     await sleep(settleMs);
+  }
+
+  // Espera um elemento ficar visivel antes de agir (evita clicar no escuro).
+  // Retorna true se apareceu; false se estourou o tempo (sem lancar).
+  async function esperar(loc, { timeout = 8000 } = {}) {
+    try { await loc.first().waitFor({ state: "visible", timeout }); return true; }
+    catch { return false; }
   }
 
   // Preenche um campo. Dois modos:
@@ -103,7 +109,7 @@ export function makeHelpers(cfg, io = ioTerminal()) {
   }
 
   return {
-    ask, pause, human, settle, digitar, marco, tentar, opcional,
+    ask, pause, human, settle, esperar, digitar, marco, tentar, opcional,
     close: () => io.close?.(),
   };
 }

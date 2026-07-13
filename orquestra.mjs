@@ -20,7 +20,27 @@ import { makeRelatorio, textoEtapa } from "./relatorio.mjs";
 export const ETAPAS = ["convite", "pagamento", "contas"];
 const FN_ETAPA = { convite: etapaConvite, pagamento: etapaPagamento, contas: etapaContas };
 
-export const chaveBM = (bm) => bm.inviteLink || JSON.stringify(bm);
+// Rede de seguranca de processo: erros de protocolo do navegador (ex.: dialogs
+// "Sair da pagina?") chegam como rejeicao/excecao NAO tratada e, sem isso,
+// matariam o processo inteiro (painel/terminal). Logamos e seguimos.
+if (!globalThis.__bmGuard) {
+  globalThis.__bmGuard = true;
+  process.on("unhandledRejection", (e) =>
+    console.log(`   ⚠ (ignorado) rejeição: ${String(e?.message || e).slice(0, 90)}`)
+  );
+  process.on("uncaughtException", (e) =>
+    console.log(`   ⚠ (ignorado) exceção: ${String(e?.message || e).slice(0, 90)}`)
+  );
+}
+
+// Aceita/descarta dialogs de uma page (senao o auto-handle do Playwright crasha).
+function armarDialogos(alvo) {
+  alvo.on("dialog", (d) => d.accept().catch(() => d.dismiss().catch(() => {})));
+}
+
+// Chave de progresso: invite link (BM nova) OU business_id (BM já aceita, sem invite).
+export const chaveBM = (bm) =>
+  bm.inviteLink || (bm.businessId ? `bid:${bm.businessId}` : JSON.stringify(bm));
 
 const recordVazio = () => ({
   seq: null, nome: null, businessId: null,
@@ -103,6 +123,9 @@ export async function executarEtapa({ cfg, h, etapa = "tudo", progressPath = "./
     browser = await chromium.connectOverCDP(ws);
     const browserCtx = browser.contexts()[0] || (await browser.newContext());
     const page = browserCtx.pages()[0] || (await browserCtx.newPage());
+    // trata dialogs (pagina atual + qualquer popup/aba nova) pra nao crashar
+    armarDialogos(page);
+    browserCtx.on("page", armarDialogos);
 
     for (let i = 0; i < bms.length; i++) {
       const bm = bms[i];

@@ -112,8 +112,9 @@
           <div class="field"><label>Seq inicial (AT…)</label><input id="d_seq" type="number" min="1"></div>
           <div class="field"><label>Qtd contas de anúncio</label><input id="d_qtd" type="number" min="1" max="10"></div>
         </div>
-        <div class="grid2">
+        <div class="grid3">
           <div class="field"><label>País</label><input id="d_pais"></div>
+          <div class="field"><label>Moeda</label><input id="d_moeda"></div>
           <div class="field"><label>Fuso (busca)</label><input id="d_fuso"></div>
         </div>
         <label style="margin-top:4px">Endereço fixo (LLC)</label>
@@ -179,8 +180,12 @@ function renderFila(){
     return `<div class="bm">
       <div class="top"><strong>BM ${i+1}</strong>&nbsp;${chipsEtapas(rec)}<span class="spacer" style="flex:1"></span>
         <button class="mini danger" onclick="delBM(${i})">✕</button></div>
-      <div class="field"><label>Invite link</label>
-        <input value="${esc(bm.inviteLink)}" placeholder="https://business.facebook.com/invitation/?token=…" onchange="ST.bms[${i}].inviteLink=this.value"></div>
+      <div class="grid2">
+        <div class="field"><label>Invite link (BM nova)</label>
+          <input value="${esc(bm.inviteLink)}" placeholder="https://business.facebook.com/invitation/?token=…" onchange="ST.bms[${i}].inviteLink=this.value"></div>
+        <div class="field"><label>Business ID (BM já aceita, sem invite)</label>
+          <input value="${esc(bm.businessId)}" placeholder="ex: 2035946167040987" onchange="ST.bms[${i}].businessId=this.value.trim()"></div>
+      </div>
       <div class="grid3">
         <div class="field"><label>Nome da LLC</label>
           <input value="${esc(bm.llcNome)}" onchange="ST.bms[${i}].llcNome=this.value"></div>
@@ -199,7 +204,7 @@ function delBM(i){ ST.bms.splice(i,1); renderFila(); }
 function renderDefaults(){
   const d = ST.defaults;
   $("d_partner").value=d.partnerBusinessId||""; $("d_seq").value=d.seqInicial??1; $("d_qtd").value=d.qtdContasAnuncio??1;
-  $("d_pais").value=d.pais||""; $("d_fuso").value=d.fuso||"";
+  $("d_pais").value=d.pais||""; $("d_moeda").value=d.moeda||""; $("d_fuso").value=d.fuso||"";
   $("d_end1").value=d.endereco?.endereco1||""; $("d_cidade").value=d.endereco?.cidade||"";
   $("d_cepend").value=d.endereco?.cep||""; $("d_estado").value=d.endereco?.estado||"";
   $("d_cnome").value=d.cartao?.nome||""; $("d_cval").value=d.cartao?.validade||""; $("d_ccep").value=d.cartao?.cep||"";
@@ -208,7 +213,7 @@ function renderDefaults(){
 function coletarDefaults(){
   return { ...ST.defaults,
     partnerBusinessId:$("d_partner").value.trim(), seqInicial:Number($("d_seq").value)||1,
-    qtdContasAnuncio:Number($("d_qtd").value)||1, pais:$("d_pais").value.trim(), fuso:$("d_fuso").value.trim(),
+    qtdContasAnuncio:Number($("d_qtd").value)||1, pais:$("d_pais").value.trim(), moeda:$("d_moeda").value.trim(), fuso:$("d_fuso").value.trim(),
     endereco:{ endereco1:$("d_end1").value.trim(), cidade:$("d_cidade").value.trim(),
                cep:$("d_cepend").value.trim(), estado:$("d_estado").value.trim() },
     cartao:{ nome:$("d_cnome").value.trim(), validade:$("d_cval").value.trim(), cep:$("d_ccep").value.trim() },
@@ -242,7 +247,7 @@ async function testarAds(){
 
 async function salvarConfig(){
   try{
-    const bms = ST.bms.filter(b=>b.inviteLink && b.inviteLink.trim());
+    const bms = ST.bms.filter(b=>(b.inviteLink&&b.inviteLink.trim())||(b.businessId&&String(b.businessId).trim()));
     const r = await fetch("/api/config",{method:"POST",headers:{"Content-Type":"application/json"},
       body:JSON.stringify({defaults:coletarDefaults(),businessManagers:bms})});
     const j = await r.json();
@@ -255,7 +260,7 @@ async function salvarConfig(){
 async function run(){
   try{
     if(!(await salvarConfig())) return;
-    if(!ST.bms.some(b=>b.inviteLink && b.inviteLink.trim())){ toast("⚠ Adicione ao menos 1 BM com invite link"); return; }
+    if(!ST.bms.some(b=>(b.inviteLink&&b.inviteLink.trim())||(b.businessId&&String(b.businessId).trim()))){ toast("⚠ Adicione ao menos 1 BM (invite link ou business ID)"); return; }
     const etapa = $("etapa").value;
     const r = await fetch("/api/run",{method:"POST",headers:{"Content-Type":"application/json"},
       body:JSON.stringify({etapa})});
